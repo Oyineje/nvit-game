@@ -2,6 +2,48 @@ pipeline {
     agent any
     environment {
         DOCKER_HUB_CREDENTIALS = 'dockerhub-repo'
+        IMAGE_NAME = 'davidokpe/nvit-game'
+        REPO_URL = 'https://github.com/ugbasawo/nvit-game.git'
+    }
+    stages {
+        stage('Git Checkout') {
+            steps {
+                dir('nvit-gameapp') {
+                    git url: REPO_URL, branch: 'main'
+                }
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    // Build the Docker image
+                    dir('nvit-gameapp') {
+                        sh 'docker build -t ${IMAGE_NAME} -f Dockerfile .'
+                    }
+                }
+            }
+        }
+        stage('Push Docker Image to Docker Hub') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-repo', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
+                    sh 'docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD'
+                    sh 'docker push ${IMAGE_NAME}'
+                }
+            }
+        }
+        stage('Deploy with manifest.yaml') {
+            steps {
+                script {
+                    // Deploy using the manifest.yaml file
+                    sh 'kubectl apply -f manifest.yaml'
+                }
+            }
+        }
+    }
+}pipeline {
+    agent any
+    environment {
+        DOCKER_HUB_CREDENTIALS = 'dockerhub-repo'
         IMAGE_NAME = 'davidokpe/nvit-gameapp1'
         REPO_URL = 'https://github.com/ugbasawo/nvit-game.git'
     }
